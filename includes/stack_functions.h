@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
+//____DEBUG_MODES
 #define HASH_PROT
 #define CANNARY_PROT
-#define DEBUB_MODE
+#define DEBUG_MODE
 
 #define STK_SIZE 16
 
@@ -24,7 +25,7 @@
 #define ASSERTED != 0 || printf("ERROR");
 #define stk_ctor(stk) stk_ctor_(&stk, STK_SIZE, __LINE__, #stk, __FUNCTION__, __FILE__)
 #define do_stk_dump(stk, log, error) stk_dump(&stk, __FUNCTION__, __LINE__, __FILE__, log, error)
-
+//#define macros for cannary temps
 
 const int stk_resize_up_const = 2;
 const int stk_resize_down_const = 4;
@@ -66,9 +67,12 @@ enum Errors
     LOGFILE_ERROR = 1 << 6,
     DATA_CANNARY_ERROR = 1 << 7,
     DATA_REALLOC_ERROR = 1 << 8,
+    EMPTY_POP_ERROR = 1 << 9,
 };
 
-unsigned int rot13(void* ptr, size_t size);
+#ifdef HASH_PROT
+    unsigned int rot13(void* ptr, size_t size);
+#endif
 
 void print_error(size_t error, FILE* output);
 

@@ -1,5 +1,4 @@
-#include "stack_functions.h"
-
+#include "../includes/stack_functions.h"
 
 int main()
 {
@@ -10,9 +9,22 @@ int main()
     
     if(error == 0)
     {
-        Elem_t elem = 123;
-        stk_push(&main_stack, elem);
-        error = stk_dtor(&main_stack);
+        //____________EXAMPLE_________________
+        Elem_t elem =  0;
+        for(Elem_t i = 0; i < 64; i++)
+        {
+            error |= stk_push(&main_stack, i);
+            printf("Pushed: %d \n", i);
+        }
+
+        for(int i = 0; i < 65 ; i++)
+        {
+            error |= stk_pop(&main_stack, &elem);
+            printf("Popouted: %d \n", elem);
+        }
+        //_______________EXAMPLE_________________//
+
+        error |= stk_dtor(&main_stack);
         print_error(error, stdout);
         return 0;
     }

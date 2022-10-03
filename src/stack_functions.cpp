@@ -1,4 +1,4 @@
-#include "stack_functions.h"
+#include "../includes/stack_functions.h"
 
 #ifdef HASH_PROT
 unsigned int rot13(void* ptr, size_t size)
@@ -25,13 +25,16 @@ void print_error(size_t error, FILE* output)
         error /= 2;
 
         int i = 0;
+        
         while(error)
         {
             i++;
+
             if(error % 2)
             {
                 switch (i)
                 {
+                
                 case 1:
                     fprintf(output, "STACK DATAPTR ERROR\n");
                     break;
@@ -64,16 +67,22 @@ void print_error(size_t error, FILE* output)
                     fprintf(output, "DATA REALLOC ERROR\n");
                     break;
 
+                case 9:
+                    fprintf(output, "EMPTY POP ERROR\n");
+                    break;
+
                 default:
                     fprintf(output, "UNKNOWN ERROR CODE\n");
                     break;
                 }
             }
+            
             error /= 2;
         }
     }
     return;
 } 
+
 
 void set_stk_info(Stack* stk, const int line, const char* name, const char* function, const char* file, FILE* output)
 {
@@ -97,8 +106,12 @@ size_t stk_verificator(Stack_t* stk)
             error |= DATAPTR_ERROR;
 
         #ifdef CANNARY_PROT
-            else if(*((unsigned long long*)(stk->data-CANNARY_SIZE)) != CANNARY || *((unsigned long long*)(stk->data+stk->capacity)) != CANNARY)
+            
+            else if(*((unsigned long long*)((char*)stk->data-CANNARY_SIZE)) != CANNARY ||
+                     *((unsigned long long*)((char*)stk->data+(sizeof(Elem_t))*stk->capacity)) != CANNARY) 
+            {
                 error |= DATA_CANNARY_ERROR;
+            }
 
             if(stk->RIGHT_CANNARY != CANNARY || stk->LEFT_CANNARY != CANNARY)
                 error |= STK_CANNARY_ERROR;
@@ -111,7 +124,7 @@ size_t stk_verificator(Stack_t* stk)
             error |= CPCT_ERROR;
 
         #ifdef HASH_PROT
-            if(stk->hash != rot13(stk->data, stk->capacity*sizeof(Elem_t)))
+            if(stk->hash != rot13(stk->data, (stk->capacity)*sizeof(Elem_t)))
                 error |= HASH_ERROR;
         #endif
         
@@ -147,7 +160,7 @@ void stk_dump(Stack* stk, const char* function, int line, const char* file, FILE
         #endif
         
         #ifdef CANNARY_PROT
-            fprintf(output, "\t[-1] = %llu CANNARY\n",*((unsigned long long*)(stk->data - CANNARY_SIZE)));
+            fprintf(output, "\t[-1] = %llu CANNARY\n",*((unsigned long long*)((char*)stk->data - CANNARY_SIZE)));
         #endif
         for(size_t i = 0; i < stk->size && i < stk->capacity; i++) 
             fprintf(output, "\t*[%lu] = %d\n", i, stk->data[i]);
@@ -160,7 +173,7 @@ void stk_dump(Stack* stk, const char* function, int line, const char* file, FILE
         }
 
         #ifdef CANNARY_PROT
-            fprintf(output, "\t[%lu] = %llu CANNARY\n", stk->capacity, *((unsigned long long*)(stk->data + stk->capacity)));
+            fprintf(output, "\t[%lu] = %llu CANNARY\n", stk->capacity, *((unsigned long long*)((char*)stk->data + (sizeof(Elem_t))*stk->capacity)));
         #endif
 
         print_error(error, output);
@@ -171,7 +184,7 @@ void stk_dump(Stack* stk, const char* function, int line, const char* file, FILE
 size_t stk_ctor_(Stack_t* stk, size_t size, const int line, const char* name, const char* function, const char* file)
 {
     size_t error = 0;
-    FILE* logfile = fopen("logfile.txt", "w");
+    FILE* logfile = fopen("../src/logfile.txt", "w");
 
     if(logfile == NULL)
     {
@@ -190,7 +203,7 @@ size_t stk_ctor_(Stack_t* stk, size_t size, const int line, const char* name, co
 
     if(stk->capacity > 0)
     { 
-        stk->data = (Elem_t*)calloc(stk->capacity + 2*CANNARY_SIZE, sizeof(Elem_t));
+        stk->data = (Elem_t*)calloc(stk->capacity*(sizeof(Elem_t)) + 2*CANNARY_SIZE, sizeof(char));
 
         if(stk->data == NULL)
         {
@@ -203,16 +216,17 @@ size_t stk_ctor_(Stack_t* stk, size_t size, const int line, const char* name, co
             stk->RIGHT_CANNARY = CANNARY;
 
             *((unsigned long long*)(stk->data)) = CANNARY;
-            *((unsigned long long *)(stk->data+stk->capacity+CANNARY_SIZE)) = CANNARY;
 
-            stk->data = stk->data + CANNARY_SIZE;
+            stk->data = (Elem_t*)((char*)stk->data + CANNARY_SIZE);
+
+            *((unsigned long long *)((char*)stk->data + (sizeof(Elem_t))*stk->capacity)) = CANNARY;
         #endif
 
         for(size_t i = 0; i < stk->capacity; i++)     
             stk->data[i] = POISONED_ELEM;
         
         #ifdef HASH_PROT
-            stk->hash = rot13(stk->data, stk->capacity*sizeof(Elem_t));
+            stk->hash = rot13(stk->data, (stk->capacity)*sizeof(Elem_t));
         #endif
 
         set_stk_info(stk, line, name, function, file, logfile);
@@ -244,7 +258,7 @@ size_t stk_dtor(Stack_t* stk)
     #endif
     
     fclose(stk->info.log);
-    free(stk->data - CANNARY_SIZE);
+    free((Elem_t*)((char*)stk->data - CANNARY_SIZE));
     
     return error;
 }
@@ -257,16 +271,18 @@ size_t stk_push(Stack_t* stk, Elem_t value)
         do_stk_dump(*stk, stk->info.log, error);
         return error;
     }
-
+    
     if(stk->size>= stk->capacity)
         error |= stk_resize_up(stk);
     
     stk->data[stk->size++] = value;
     
     #ifdef HASH_PROT
-        stk->hash = rot13(stk->data, stk->size*sizeof(Elem_t));
+        stk->hash = rot13(stk->data, (stk->capacity)*sizeof(Elem_t));
     #endif
-
+    
+    //do_stk_dump(*stk, stk->info.log, DATA_REALLOC_ERROR) //example-review dump
+    
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
@@ -285,19 +301,26 @@ size_t stk_pop(Stack_t* stk, Elem_t* value)
         return error;
     }
 
-    if(stk->size == 0) return 0;
+    if(stk->size == 0)
+    {
+        error |= EMPTY_POP_ERROR;
+        do_stk_dump(*stk, stk->info.log, error);
+        return error;
+    }
 
     *value = (stk->data)[stk->size - 1];
     stk->data[stk->size-1] = POISONED_ELEM;
     stk->size--;
 
-    if(stk->size <= (stk->capacity)/stk_resize_down_const)
-        error |= stk_resize_down(stk);
-
     #ifdef HASH_PROT
-        stk->hash = rot13(stk, stk->size*sizeof(Elem_t));
+        stk->hash = rot13(stk->data, (stk->capacity)*sizeof(Elem_t));
     #endif
 
+    if(stk->size <= (stk->capacity)/stk_resize_down_const && stk->size != 0)
+        error |= stk_resize_down(stk);
+
+    //do_stk_dump(*stk, stk->info.log, DATA_REALLOC_ERROR) //example-review dump
+    
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
@@ -317,26 +340,30 @@ size_t stk_resize_up(Stack* stk)
         return error;
     }
     
-    free(stk->data + stk->capacity);
-    
-    void* temp = realloc(stk->data, sizeof(Elem_t)*(stk->capacity)*stk_resize_up_const + CANNARY_SIZE);
+    stk->data =(Elem_t*)((char*)stk->data - CANNARY_SIZE);
 
+    void* temp = realloc(stk->data, sizeof(Elem_t)*(stk->capacity)*stk_resize_up_const + 2*CANNARY_SIZE);
+    
     if(temp == NULL)
         return(DATA_REALLOC_ERROR);
 
-    for(size_t i = 0; i < stk->capacity; i++)
-        *(stk->data+stk->capacity+i) = POISONED_ELEM;
+    stk->data = (Elem_t*)temp;
 
+    stk->data =(Elem_t*)((char*)stk->data + CANNARY_SIZE);
+
+    for(size_t i = 0; i < stk->capacity*(stk_resize_up_const-1); i++)
+        *(stk->data+stk->capacity+i) = POISONED_ELEM;
+    
     stk->capacity = stk->capacity*stk_resize_up_const;
     
     #ifdef CANNARY_PROT
-        *((unsigned long long*)(stk->data + stk->capacity)) = CANNARY;
+        *((unsigned long long*)((char*)stk->data + (sizeof(Elem_t))*stk->capacity)) = CANNARY;
     #endif
 
     #ifdef HASH_PROT
-        stk->hash = rot13(stk->data, stk->capacity*sizeof(Elem_t));
+        stk->hash = rot13(stk->data, (stk->capacity)*sizeof(Elem_t));
     #endif
-
+        
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
@@ -349,25 +376,29 @@ size_t stk_resize_up(Stack* stk)
 size_t stk_resize_down(Stack* stk)
 {
     size_t error = 0;
+
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
         return error;
     }
     
-    void* temp = realloc(stk->data, sizeof(Elem_t)*(stk->capacity)/stk_resize_up_const + CANNARY_SIZE);
+    stk->data = (Elem_t*)((char*)stk->data - CANNARY_SIZE);
+    void* temp  = realloc(stk->data, sizeof(Elem_t)*(stk->capacity)/stk_resize_up_const + 2*CANNARY_SIZE);
 
     if(temp == NULL)
         return(DATA_REALLOC_ERROR);
 
+    stk->data = (Elem_t*)temp;
+    stk->data = (Elem_t*)((char*)stk->data + CANNARY_SIZE);
     stk->capacity = stk->capacity/stk_resize_up_const;
 
     #ifdef CANNARY_PROT
-        *((unsigned long long*)(stk->data + stk->capacity)) = CANNARY;
+        *((unsigned long long*)((char*)stk->data + (sizeof(Elem_t))*stk->capacity)) = CANNARY;
     #endif
 
     #ifdef HASH_PROT
-        stk->hash = rot13(stk->data, stk->capacity*sizeof(Elem_t));
+        stk->hash = rot13(stk->data, (stk->capacity)*sizeof(Elem_t));
     #endif
 
     if((error = stk_verificator(stk)) != 0)
