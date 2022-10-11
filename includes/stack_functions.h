@@ -9,7 +9,7 @@
 //____DEBUG_MODES
 #define HASH_PROT
 #define CANNARY_PROT
-#define DEBUG_MODE
+#define DEBUG_MODE //add
 
 #define STK_SIZE 16
 
@@ -88,7 +88,7 @@ size_t stk_dtor(Stack_t* stk);
 
 size_t stk_push(Stack_t* stk, Elem_t value);
 
-size_t stk_pop(Stack_t* stk, Elem_t* value);
+Elem_t stk_pop(Stack_t* stk);
 
 size_t stk_resize_up(Stack* stk);
 

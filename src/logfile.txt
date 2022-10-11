@@ -1,6 +1,22 @@
 DUMPED IN: stk_pop at ../src/stack_functions.cpp(307):
-STACK: main_stack[0x7ffeb849c650]
-at FUNCTION: main IN FILE: ../src/main.cpp LINE:(8)
+STACK: main_stack[0x7ffc5e12bec0]
+at FUNCTION: main IN FILE: ../src/main.cpp LINE:(7)
+
+STACK INFO:
+ size = 0;
+ capacity = 2;
+ dataptr [0x603000000048]
+ hash = 3160757810 
+
+	[-1] = 9999999 CANNARY
+	[0] = 1111111111 (POISON)
+	[1] = 1111111111 (POISON)
+	[2] = 9999999 CANNARY
+EMPTY POP ERROR
+
+DUMPED IN: stk_pop at ../src/stack_functions.cpp(307):
+STACK: main_stack[0x7ffc5e12bec0]
+at FUNCTION: main IN FILE: ../src/main.cpp LINE:(7)
 
 STACK INFO:
  size = 0;

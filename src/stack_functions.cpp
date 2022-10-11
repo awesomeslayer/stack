@@ -292,23 +292,23 @@ size_t stk_push(Stack_t* stk, Elem_t value)
     return error;
 }
 
-size_t stk_pop(Stack_t* stk, Elem_t* value)
+Elem_t stk_pop(Stack_t* stk)
 {
     size_t error = 0;
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
-        return error;
+        return POISONED_ELEM;
     }
 
     if(stk->size == 0)
     {
         error |= EMPTY_POP_ERROR;
         do_stk_dump(*stk, stk->info.log, error);
-        return error;
+        return POISONED_ELEM;
     }
 
-    *value = (stk->data)[stk->size - 1];
+    Elem_t value = (stk->data)[stk->size - 1];
     stk->data[stk->size-1] = POISONED_ELEM;
     stk->size--;
 
@@ -324,10 +324,10 @@ size_t stk_pop(Stack_t* stk, Elem_t* value)
     if((error = stk_verificator(stk)) != 0)
     {
         do_stk_dump(*stk, stk->info.log, error);
-        return error;
+        return POISONED_ELEM;
     }
 
-    return error;
+    return value;
 
 }
 
